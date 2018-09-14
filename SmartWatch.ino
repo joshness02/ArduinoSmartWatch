@@ -255,7 +255,7 @@ void ancsDataSourceCharacteristicCharacteristicValueUpdated(BLECentral& central,
   for(int i = 0; i < len; i++){    
       if(reading == 'm'){
         if(attrLen == 0){
-          reading = 'd';
+          reading = 's';
           attrLen = chars[i+1];
           //Serial.println(F("\nFinished Message"));
           i+=2;
