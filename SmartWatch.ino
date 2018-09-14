@@ -1,7 +1,7 @@
 // Copyright (c) Sandeep Mistry. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-
+//Sorry for the messy and undocumented code, this is still a work-in-progress!
 
 
 #include <SPI.h>
