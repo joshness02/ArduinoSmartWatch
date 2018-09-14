@@ -7,7 +7,7 @@
 #include <SPI.h>
 //#include <Wire.h>
 //#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
+//#include <Adafruit_SSD1306.h>
 #include <BLEPeripheral.h>
 
 //#include <BLEUtil.h>
@@ -17,7 +17,10 @@
 #define BLE_RDY   2
 #define BLE_RST   5
 #define OLED_RESET 4
-Adafruit_SSD1306 display(OLED_RESET);
+//Adafruit_SSD1306 display(OLED_RESET);
+
+//#define FREQ (8000000)
+//#define INT_FREQ (1)
 
 // create peripheral instance, see pinouts above
 BLEPeripheral                    blePeripheral                            = BLEPeripheral(BLE_REQ, BLE_RDY, BLE_RST);
@@ -32,11 +35,11 @@ BLERemoteCharacteristic          ancsControlPointCharacteristic           = BLER
 BLERemoteCharacteristic          ancsDataSourceCharacteristic             = BLERemoteCharacteristic("22eac6e924d64bb5be44b36ace7c7bfb", BLENotify);
 
 //byte ANCS_COMMAND_GET_NOTIF_ATTRIBUTES = 0;
-byte ANCS_NOTIFICATION_ATTRIBUTE_TITLE = 1; //name of sender
-byte ANCS_NOTIFICATION_ATTRIBUTE_SUBTITLE = 2;
-byte ANCS_NOTIFICATION_ATTRIBUTE_MESSAGE = 3;
+#define ANCS_NOTIFICATION_ATTRIBUTE_TITLE 1; //name of sender
+#define ANCS_NOTIFICATION_ATTRIBUTE_SUBTITLE 2;
+#define ANCS_NOTIFICATION_ATTRIBUTE_MESSAGE 3;
 //byte ANCS_NOTIFICATION_ATTRIBUTE_MESSAGE_SIZE = 4;
-byte ANCS_NOTIFICATION_ATTRIBUTE_DATE = 5;
+#define ANCS_NOTIFICATION_ATTRIBUTE_DATE 5;
 //byte ANCS_NOTIFICATION_ATTRIBUTE_DATA_SIZE = 16;
 //long MESSAGE_SIZE = 100;
 //byte ANCS_NOTIFICATION_ATTRIBUTE_APP_IDENTIFIER = 0;
@@ -63,7 +66,7 @@ void setup() {
   while(!Serial);
 #endif
 
-  display.begin(SSD1306_SWITCHCAPVCC, 0x3D);
+  //display.begin(SSD1306_SWITCHCAPVCC, 0x3D);
 
   // clears bond data on every boot
   bleBondStore.clearData();
@@ -97,6 +100,7 @@ void setup() {
 
   Serial.println(F("BLE Peripheral - ANCS Restart"));
 
+  //init_timer();
 }
 
 void loop() {
@@ -134,7 +138,7 @@ void blePeripheralRemoteServicesDiscoveredHandler(BLECentral& central) {
     ancsNotificationSourceCharacteristic.subscribe();
   }
 }
-
+/*
 enum AncsNotificationEventId {
   AncsNotificationEventIdAdded    = 0,
   AncsNotificationEventIdModified = 1,
@@ -161,7 +165,7 @@ enum AncsNotificationCategoryId {
   AncsNotificationCategoryIdBusinessAndFinance = 9,
   AncsNotificationCategoryIdLocation           = 10,
   AncsNotificationCategoryIdEntertainment      = 11
-};
+};*/
 
 struct AncsNotification {
   unsigned char eventId;
@@ -226,15 +230,24 @@ void ancsNotificationSourceCharacteristicValueUpdated(BLECentral& central, BLERe
   //BLEUtil::printBuffer(characteristic.value(), characteristic.valueLength());
 }
 
+void charsToStr(unsigned char buffer[], int len, char *chars){  
+  for(int i = 0; i < len; i++){
+    int buf = buffer[i];
+    char val = char(buf);
+    chars[i] = val;
+  }
+}
+
 void ancsDataSourceCharacteristicCharacteristicValueUpdated(BLECentral& central, BLERemoteCharacteristic& characteristic) {
   //Serial.println(F("ANCS Data Source Value Updated: "));
 
   int len = characteristic.valueLength();
-  //unsigned char val[len] = {};
+  //unsigned char val[len] = {};// = characteristic.value();
   unsigned char chars[len] = {};
   for(int i = 0; i < len; i++){
     chars[i] = characteristic.value()[i];  
   }
+  //charsToStr(val, len, chars);
 
   //BLEUtil::printBuffer(val, len);
   int idx = 0;
@@ -252,7 +265,7 @@ void ancsDataSourceCharacteristicCharacteristicValueUpdated(BLECentral& central,
     idx = 8;
   }
   
-  for(int i = 0; i < len; i++){    
+  for(int i = idx; i < len; i++){    
       if(reading == 'm'){
         if(attrLen == 0){
           reading = 's';
@@ -260,7 +273,7 @@ void ancsDataSourceCharacteristicCharacteristicValueUpdated(BLECentral& central,
           //Serial.println(F("\nFinished Message"));
           i+=2;
         }  else {
-          message.concat(chars[i]); 
+          message.concat((char)chars[i]); 
           attrLen--;
         }
       }else if(reading == 's'){
@@ -270,7 +283,7 @@ void ancsDataSourceCharacteristicCharacteristicValueUpdated(BLECentral& central,
             i+=2;
             //Serial.println(F("\nFinished Subtitle (Message Title)"));
           } else {
-            title.concat(chars[i]);
+            title.concat((char)chars[i]);
             attrLen--; 
           }
       }else if(reading == 't'){
@@ -280,13 +293,14 @@ void ancsDataSourceCharacteristicCharacteristicValueUpdated(BLECentral& central,
             i+=2;
             //Serial.println(F("\nFinished Title (Sender)"));
           } else {
-            sender.concat(chars[i]);  
+            sender.concat((char)chars[i]);  
             attrLen--;
           }
       }else{
-          date.concat(chars[i]);
+          date.concat((char)chars[i]);
       }
   }
+  /*
   if(reading == 'd'){
     display.clearDisplay();
     display.setTextSize(2);
@@ -295,18 +309,57 @@ void ancsDataSourceCharacteristicCharacteristicValueUpdated(BLECentral& central,
     display.println(F("Sender: "));
     display.println(sender);
     display.display();
-  }
-  /*
-  if(reading == 'd'){
-    Serial.print(("Sender: "));
-    Serial.println(sender);
-    Serial.print(("Title: "));
-    Serial.println(title);
-    Serial.print(("Message: "));
-    Serial.println(message);  
-    Serial.print("Date: ");
-    Serial.println(date);
   }*/
+  
+  if(reading == 'd'){
+    //Serial.println(F("Sender: "));
+    Serial.println(sender);
+    //Serial.println(F("Title: "));
+    Serial.println(title);
+    //Serial.println(F("Message: "));
+    Serial.println(message);  
+    //Serial.println(F"Date: ");
+    Serial.println(date);
+  }
+}
+/*
+void init_timer() {
+  cli();//stop interrupts
+  //set timer1 interrupt at 1Hz
+  TCCR1A = 0;// set entire TCCR1A register to 0
+  TCCR1B = 0;// same for TCCR1B
+  TCNT1  = 0;//initialize counter value to 0
+  // set compare match register for 1hz increments
+  OCR1A = FREQ / 1024 / INT_FREQ; // (must be <65536)
+  // turn on CTC mode
+  TCCR1B |= (1 << WGM12);
+  // Set CS12 and CS10 bits for 1024 prescaler
+  TCCR1B |= (1 << CS12) | (1 << CS10);
+  // enable timer compare interrupt
+  TIMSK1 |= (1 << OCIE1A);
+
+  sei();//allow interrupts
 }
 
+ISR(TIMER1_COMPA_vect) {
+  if (second < 59) {
+    second++;
+  } 
+  else if (minute < 59) {
+    second = 0;
+    minute++;
+  } 
+  else if (hour < 23) {
+    second = 0;
+    minute = 0;
+    hour++;
+  } 
+  else {
+    second = 0;
+    minute = 0;
+    hour = 0;
+    day++;
+  }
+}
+*/
 
