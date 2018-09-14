@@ -19,9 +19,6 @@
 #define OLED_RESET 4
 Adafruit_SSD1306 display(OLED_RESET);
 
-//#define FREQ (8000000)
-//#define INT_FREQ (1)
-
 // create peripheral instance, see pinouts above
 BLEPeripheral                    blePeripheral                            = BLEPeripheral(BLE_REQ, BLE_RDY, BLE_RST);
 BLEBondStore                     bleBondStore;
@@ -100,7 +97,6 @@ void setup() {
 
   Serial.println(F("BLE Peripheral - ANCS Restart"));
 
-  //init_timer();
 }
 
 void loop() {
@@ -229,25 +225,16 @@ void ancsNotificationSourceCharacteristicValueUpdated(BLECentral& central, BLERe
 
   //BLEUtil::printBuffer(characteristic.value(), characteristic.valueLength());
 }
-/*
-void charsToStr(unsigned char buffer[], int len, char *chars){  
-  for(int i = 0; i < len; i++){
-    int buf = buffer[i];
-    char val = char(buf);
-    chars[i] = val;
-  }
-}*/
 
 void ancsDataSourceCharacteristicCharacteristicValueUpdated(BLECentral& central, BLERemoteCharacteristic& characteristic) {
   //Serial.println(F("ANCS Data Source Value Updated: "));
 
   int len = characteristic.valueLength();
-  //unsigned char val[len] = {};// = characteristic.value();
+  //unsigned char val[len] = {};
   unsigned char chars[len] = {};
   for(int i = 0; i < len; i++){
     chars[i] = characteristic.value()[i];  
   }
-  //charsToStr(val, len, chars);
 
   //BLEUtil::printBuffer(val, len);
   int idx = 0;
@@ -321,45 +308,5 @@ void ancsDataSourceCharacteristicCharacteristicValueUpdated(BLECentral& central,
     Serial.println(date);
   }*/
 }
-/*
-void init_timer() {
-  cli();//stop interrupts
-  //set timer1 interrupt at 1Hz
-  TCCR1A = 0;// set entire TCCR1A register to 0
-  TCCR1B = 0;// same for TCCR1B
-  TCNT1  = 0;//initialize counter value to 0
-  // set compare match register for 1hz increments
-  OCR1A = FREQ / 1024 / INT_FREQ; // (must be <65536)
-  // turn on CTC mode
-  TCCR1B |= (1 << WGM12);
-  // Set CS12 and CS10 bits for 1024 prescaler
-  TCCR1B |= (1 << CS12) | (1 << CS10);
-  // enable timer compare interrupt
-  TIMSK1 |= (1 << OCIE1A);
-
-  sei();//allow interrupts
-}
-
-ISR(TIMER1_COMPA_vect) {
-  if (second < 59) {
-    second++;
-  } 
-  else if (minute < 59) {
-    second = 0;
-    minute++;
-  } 
-  else if (hour < 23) {
-    second = 0;
-    minute = 0;
-    hour++;
-  } 
-  else {
-    second = 0;
-    minute = 0;
-    hour = 0;
-    day++;
-  }
-}
-*/
 
 
