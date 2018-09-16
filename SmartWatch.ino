@@ -1,14 +1,28 @@
 // Copyright (c) Sandeep Mistry. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-//Sorry for the messy and undocumented code, this is still a work-in-progress!
+//Sorry for the messy code, this is still a work-in-progress :)
+//Many of the Serial communications are disabled at this point to save on memory
 
 
 #include <SPI.h>
-//#include <Wire.h>
-//#include <Adafruit_GFX.h>
-//#include <Adafruit_SSD1306.h>
 #include <BLEPeripheral.h>
+
+#include <SPI.h>
+#include "SSD1306Ascii.h"
+#include "SSD1306AsciiSoftSpi.h"
+
+// pin definitions
+#define CS_PIN    12
+#define RST_PIN   13
+#define DC_PIN    11
+#define MOSI_PIN 9
+#define CLK_PIN  10
+
+// Define proper RST_PIN if required.
+//#define RST_PIN 4
+
+SSD1306AsciiSoftSpi oled;
 
 //#include <BLEUtil.h>
 
@@ -16,11 +30,11 @@
 #define BLE_REQ   6
 #define BLE_RDY   2
 #define BLE_RST   5
-#define OLED_RESET 4
+//#define OLED_RESET 4
 //Adafruit_SSD1306 display(OLED_RESET);
 
-//#define FREQ (8000000)
-//#define INT_FREQ (1)
+#define FREQ (8000000)
+#define INT_FREQ (1)
 
 // create peripheral instance, see pinouts above
 BLEPeripheral                    blePeripheral                            = BLEPeripheral(BLE_REQ, BLE_RDY, BLE_RST);
@@ -50,13 +64,14 @@ unsigned long last_command_send = 0;
 int newNotif = false;
 int newNotifs = 0;
 
-String message = "",
-sender = "",
-title = "",
-date = "";
+char message[10] = "";
+char sender[10] = "";
+char title[10] = "";
+char date[10] = "";
+/*String message = "Hello World", sender = "", title = "", date = "";*/
 byte day = 0, hour = 0, minute = 0, second = 0;
 
-char reading = 'm';
+char reading = ' ';
 byte attrLen = 0;
 
 void setup() {
@@ -66,8 +81,16 @@ void setup() {
   while(!Serial);
 #endif
 
-  //display.begin(SSD1306_SWITCHCAPVCC, 0x3D);
+  //init_timer();
+  /*
+  oled.setFont(System5x7);
 
+  oled.clear();
+  oled.println("Hello World");
+
+  delay(10000);*/
+  //display.begin(SSD1306_SWITCHCAPVCC, 0x3D);
+  
   // clears bond data on every boot
   bleBondStore.clearData();
 
@@ -77,8 +100,8 @@ void setup() {
   blePeripheral.setLocalName("ANCS");
 
   // set device name and appearance
-  blePeripheral.setDeviceName("Joshua's SmartWatch");
-  blePeripheral.setAppearance(0x0080);
+  blePeripheral.setDeviceName("sw");
+  blePeripheral.setAppearance(0x0080); //192
 
   blePeripheral.addRemoteAttribute(ancsService);
   blePeripheral.addRemoteAttribute(ancsNotificationSourceCharacteristic);
@@ -98,13 +121,19 @@ void setup() {
   // begin initialization
   blePeripheral.begin();
 
+  //Uncommenting this line causes the program to stop working
+  //oled.begin(&Adafruit128x64, CS_PIN, DC_PIN, CLK_PIN, MOSI_PIN, RST_PIN);
+   
+  //oled.clear();
+  //oled.print("New Message");
+
   Serial.println(F("BLE Peripheral - ANCS Restart"));
 
-  //init_timer();
 }
 
 void loop() {
   blePeripheral.poll();
+  
 }
 
 void blePeripheralConnectHandler(BLECentral& central) {
@@ -180,6 +209,9 @@ void ancsNotificationSourceCharacteristicValueUpdated(BLECentral& central, BLERe
   struct AncsNotification notification;
   
   memcpy(&notification, characteristic.value(), sizeof(notification));
+  
+  //This can all be ignored for the moment
+  
   /*
   Serial.print(("\tEvent ID: "));
   Serial.println(notification.eventId);
@@ -245,17 +277,22 @@ void ancsDataSourceCharacteristicCharacteristicValueUpdated(BLECentral& central,
   //unsigned char val[len] = {};// = characteristic.value();
   unsigned char chars[len] = {};
   for(int i = 0; i < len; i++){
-    chars[i] = characteristic.value()[i];  
+    chars[i] = characteristic.value()[i]; 
+    //Serial.print(String(chars[i], HEX));
+    //Serial.print(" ");
   }
+  //Serial.println();
   //charsToStr(val, len, chars);
 
   //BLEUtil::printBuffer(val, len);
+  
   int idx = 0;
-  if(int(chars[0]) == 0){
-    Serial.println(F("New Notif"));
-    message = "";
-    sender = "";
-    title = "";
+  if(int(chars[0]) == 0 && reading == ' '){
+    //Serial.println(F("New Notif"));
+    strcpy(message, "");
+    strcpy(title, "");
+    strcpy(sender, "");
+    strcpy(date, "");
     hour = 0;
     minute = 0;
     second = 0;
@@ -267,37 +304,42 @@ void ancsDataSourceCharacteristicCharacteristicValueUpdated(BLECentral& central,
   
   for(int i = idx; i < len; i++){    
       if(reading == 'm'){
-        if(attrLen == 0){
+        //if(attrLen == 0){
+        if(chars[i+1] == 0){
           reading = 's';
           attrLen = chars[i+1];
           //Serial.println(F("\nFinished Message"));
           i+=2;
         }  else {
-          message.concat((char)chars[i]); 
+          strcat(message, (char)chars[i]);
           attrLen--;
         }
-      }else if(reading == 's'){
+      //}else if(reading == 's'){
+      }else if(chars[i+1] == 0){
           if(attrLen == 0){
             reading = 't';
             attrLen = chars[i+1];
             i+=2;
             //Serial.println(F("\nFinished Subtitle (Message Title)"));
           } else {
-            title.concat((char)chars[i]);
+            strcat(title, (char)chars[i]);
             attrLen--; 
           }
-      }else if(reading == 't'){
+      //}else if(reading == 't'){
+      }else if(chars[i+1] == 0){
           if(attrLen == 0){
             reading = 'd';
             attrLen = chars[i+1];
             i+=2;
             //Serial.println(F("\nFinished Title (Sender)"));
           } else {
-            sender.concat((char)chars[i]);  
+            strcat(sender, (char)chars[i]);
             attrLen--;
           }
       }else{
-          date.concat((char)chars[i]);
+        if(char(chars[i])>30){
+          strcat(date, (char)chars[i]);
+        }
       }
   }
   /*
@@ -310,16 +352,28 @@ void ancsDataSourceCharacteristicCharacteristicValueUpdated(BLECentral& central,
     display.println(sender);
     display.display();
   }*/
-  
-  if(reading == 'd'){
+  //date.trim();
+  //Serial.println(date);
+  if(reading == 'd'){// && date.length() == 15){
     //Serial.println(F("Sender: "));
-    Serial.println(sender);
+    //Serial.println(sender);
     //Serial.println(F("Title: "));
-    Serial.println(title);
+    //Serial.println(title);
     //Serial.println(F("Message: "));
-    Serial.println(message);  
+    //Serial.println(message);
     //Serial.println(F"Date: ");
-    Serial.println(date);
+    char z = '0';
+    hour = ((int(date[9]-z)*10+int(date[10]-z)-1)%12)+1;
+    minute = int(date[11]-z)*10+int(date[12]-z);
+    second = int(date[13]-z)*10+int(date[14]-z);
+    //Serial.println(date[10]);
+    /*Serial.print(hour);
+    Serial.print(":");
+    Serial.print(minute);
+    Serial.print(":");
+    Serial.println(second);
+    Serial.println(date);*/
+    reading = ' ';
   }
 }
 /*
@@ -344,6 +398,14 @@ void init_timer() {
 ISR(TIMER1_COMPA_vect) {
   if (second < 59) {
     second++;
+    /*Serial.print(hour);
+    Serial.print(":");
+    Serial.print(minute);
+    Serial.print(":");
+    Serial.println(second);*
+    //oled.clear();
+    //oled.print("New Message");
+  
   } 
   else if (minute < 59) {
     second = 0;
@@ -360,6 +422,6 @@ ISR(TIMER1_COMPA_vect) {
     hour = 0;
     day++;
   }
-}
-*/
+}*/
+
 
