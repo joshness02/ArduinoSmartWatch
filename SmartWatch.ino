@@ -12,7 +12,7 @@
 #include "SSD1306Ascii.h"
 #include "SSD1306AsciiSoftSpi.h"
 
-// pin definitions
+// pin definitions for OLED
 #define CS_PIN    12
 #define RST_PIN   13
 #define DC_PIN    11
@@ -26,7 +26,7 @@ SSD1306AsciiSoftSpi oled;
 
 //#include <BLEUtil.h>
 
-// define pins (varies per shield/board)
+// define pins for BLE (varies per shield/board)
 #define BLE_REQ   6
 #define BLE_RDY   2
 #define BLE_RST   5
